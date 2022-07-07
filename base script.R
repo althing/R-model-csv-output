@@ -50,8 +50,12 @@
         # create vector of coef estimates and se's.
         # vector alternates between the two (so the coef for the first var is first, then its se, then the coef for the second var, etc).
         est <- results$Estimate
+        est <- round(est, 3)
         err <- results$'Std. Error'
+        err <- round(err, 3)
+        err <- paste0("(", err, ")")
         coefs.and.errors <- c(t(cbind(est,matrix(err, ncol=1, byrow=TRUE)))) 
+        #coefs.and.errors <- round(coefs.and.errors, 3)
 
         # create stars (*) column, indicating significance
         pvals <- results[,4] # extract p values

@@ -1,45 +1,78 @@
-    
-    # m1 is a linear model.
-    x <- summary(m1)$coefficients
-    x <- as.data.frame(x)
 
-    est <- x$Estimate
-    err <- x$'Std. Error'
+models.list <- list(m1, m2)
 
-    #returns a vector of coef. ests and st. errors.
-    #alternates between the two (so the coef for the first var is first, then its se, then the coef for the second var, etc)
-    coefs_and_errors <- c(t(cbind(est,matrix(err, ncol=1, byrow=TRUE))))
+# create master list of unique row names and variable names.
+# all models will use the unique colnames to set their row order.   
 
-    #double var names
-    # Recursively repeat vector elements N times each
-    #https://stackoverflow.com/questions/15141735/recursively-repeat-vector-elements-n-times-each
-    var_names <- rownames(x)
-    var_names <- as.data.frame(var_names)
-    var_names$blanks <- " "
+i <- 1 #model that has all variables that appear in the table
 
-    var_names_and_blanks <- c(t(cbind(var_names$var_names,matrix(var_names$blanks, ncol=1, byrow=TRUE))))
-    
-    # repeat each name occurance
-    #var_names <- rep(v, each=2)
-    #y <- cbind(var_names, coefs_and_errors)
-    #df <- as.data.frame(y)    
-    #fwrite(df, "./test.csv")
+results <- summary(models.list[[i]])$coefficients
+results <- as.data.frame(results)
 
-    # extract p values
-    pvals <- summary(m1)$coefficients[,4]  
+# create unique row names
+var.names <- rownames(results)
+var.names <- as.data.frame(var.names)
+setnames(var.names, "var.names", "coef.names")
+var.names$se.names <- var.names$coef.names
+var.names$coef.names <- paste0(var.names$coef.names, ".c")
+var.names$se.names <- paste0(var.names$se.names, ".se")
+row.names <- c(t(cbind(var.names$coef.names,matrix(var.names$se.names, ncol=1, byrow=TRUE))))
+row.names.complete <- as.data.frame(row.names)
+
+# create variable names as they'll appear on the table (with blanks for se rows) 
+var.names <- rownames(results)
+var.names <- as.data.frame(var.names)
+var.names$blanks <- " "
+var.names.and.blanks.complete <- c(t(cbind(var.names$var.names,matrix(var.names$blanks, ncol=1, byrow=TRUE))))
+
+y.complete <- cbind(row.names.complete, var.names.and.blanks.complete)
+
+
+for (i in 1:length(models.list)) {
+
+                    #i <- 2
+
+    results <- summary(models.list[[i]])$coefficients
+    results <- as.data.frame(results)
+
+    # create unique row names
+    var.names <- rownames(results)
+    var.names <- as.data.frame(var.names)
+    setnames(var.names, "var.names", "coef.names")
+    var.names$se.names <- var.names$coef.names
+    var.names$coef.names <- paste0(var.names$coef.names, ".c")
+    var.names$se.names <- paste0(var.names$se.names, ".se")
+    row.names <- c(t(cbind(var.names$coef.names,matrix(var.names$se.names, ncol=1, byrow=TRUE))))
+    row.names <- as.data.frame(row.names)
+
+
+
+    # create vector of coef estimates and se's.
+    # vector alternates between the two (so the coef for the first var is first, then its se, then the coef for the second var, etc).
+    est <- results$Estimate
+    err <- results$'Std. Error'
+    coefs.and.errors <- c(t(cbind(est,matrix(err, ncol=1, byrow=TRUE)))) 
+
+    # create stars (*) column, indicating significance
+    pvals <- results[,4] # extract p values
+        # or use  summary(models.list[[i]])$coefficients[,4]
     x <- as.data.frame(pvals)
     x$stars <- " "
     x$blanks <- " "
-
-    x$stars[which(x$pvals < 0.1 & x$pvals >= 0.05)] <- "."
+    x$stars[which(x$pvals < 0.1 & x$pvals >= 0.05)] <- "."     # try special unicode characters like †.
     x$stars[which(x$pvals < 0.05 & x$pvals >= 0.01)] <- "*"
     x$stars[which(x$pvals < 0.01 & x$pvals >= 0.001)] <- "**"
     x$stars[which(x$pvals < 0.001)] <- "***"
-
     stars <- c(t(cbind(x$stars,matrix(x$blanks, ncol=1, byrow=TRUE))))
 
-    #cbind stars with the var_names and coefs_and_errors above.
+    y <- cbind(row.names, coefs.and.errors, stars)
+
+    #make the coefs.and.errors and stars column names unique for each model.
+    colnames(y)[2] <- paste0(colnames(y)[2], i)
+    colnames(y)[3] <- paste0(colnames(y)[3], i)
 
 
-    y <- cbind(var_names_and_blanks, coefs_and_errors, stars)
-    df <- as.data.frame(y)   
+
+    y.complete <- left_join(y.complete, y, by = "row.names")
+
+}

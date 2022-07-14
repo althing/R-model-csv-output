@@ -1,5 +1,4 @@
-
-    models.list <- list(m1, m2, m3)
+    models.list <- list(m1, m2, m3, m4, m5, m6)
 
     # create master list of unique row names and variable names.
     # all models will use the unique colnames to set their row order.   
@@ -46,7 +45,6 @@
         row.names <- as.data.frame(row.names)
 
 
-
         # create vector of coef estimates and se's.
         # vector alternates between the two (so the coef for the first var is first, then its se, then the coef for the second var, etc).
         est <- results$Estimate
@@ -63,7 +61,7 @@
         x <- as.data.frame(pvals)
         x$stars <- " "
         x$blanks <- " "
-        x$stars[which(x$pvals < 0.1 & x$pvals >= 0.05)] <- "."     # try special unicode characters like †.
+        x$stars[which(x$pvals < 0.1 & x$pvals >= 0.05)] <- "†"     # try special unicode characters like †.
         x$stars[which(x$pvals < 0.05 & x$pvals >= 0.01)] <- "*"
         x$stars[which(x$pvals < 0.01 & x$pvals >= 0.001)] <- "**"
         x$stars[which(x$pvals < 0.001)] <- "***"
@@ -75,13 +73,10 @@
         colnames(y)[2] <- paste0(colnames(y)[2], i)
         colnames(y)[3] <- paste0(colnames(y)[3], i)
 
-
-
         y.complete <- left_join(y.complete, y, by = "row.names")
 
 
     }
-
 
     # add model numbers to the appropriate cols.
     vec <- rep("", each = ncol(y.complete)) # make empty vector.
@@ -92,17 +87,57 @@
     }
     y.complete <- rbind(vec, y.complete)
     
-    #add dv name to top of col 3
+    #add dv name to top of col 2
     vec <- rep("", each = ncol(y.complete)) # make empty vector.
     a <- as.character(summary(models.list[[full.model.number]])$terms[[2]]) #full.model.number is set above.
-    vec[3] <- paste0("DV: ", a)
+    vec[2] <- paste0("DV: ", a)
     y.complete <- rbind(vec, y.complete)
 
-    # add R2 row
+    # add R2 row.
+    my.list <- list()
+    for (j in 1:length(models.list)) {
+        my.list[j] <- attr(summ(models.list[[j]]), "rsq")  
+    }
+    vec <- round(unlist(my.list), 3)
+    vec <- as.character(vec)
+    blanks <- rep("", each = length(vec))
+    vec <- c(t(cbind(vec, matrix(blanks, ncol=1, byrow=TRUE))))
+    line.and.var.name <- c("R2", "R2")
+    vec <- append(line.and.var.name, vec)
+    y.complete <- rbind(y.complete, vec)
+
+    # add Adj R2 row.
+    my.list <- list()
+    for (j in 1:length(models.list)) {
+        my.list[j] <- attr(summ(models.list[[j]]), "arsq")  
+    }
+    vec <- round(unlist(my.list), 3)
+    vec <- as.character(vec)
+    blanks <- rep("", each = length(vec))
+    vec <- c(t(cbind(vec, matrix(blanks, ncol=1, byrow=TRUE))))
+    line.and.var.name <- c("aR2", "Adj R2")
+    vec <- append(line.and.var.name, vec)
+    y.complete <- rbind(y.complete, vec)
+
     # add N row
+    my.list <- list()
+    for (j in 1:length(models.list)) {
+        my.list[j] <- attr(summ(models.list[[j]]), "n")  
+    }
+    vec <- unlist(my.list)
+    vec <- as.character(vec)
+    blanks <- rep("", each = length(vec))
+    vec <- c(t(cbind(vec, matrix(blanks, ncol=1, byrow=TRUE))))
+    line.and.var.name <- c("", "N")
+    vec <- append(line.and.var.name, vec)
+    y.complete <- rbind(y.complete, vec)
 
 
-    # csv output
+
+    y.complete$row.names <- NULL
+        
+
+
     View(y.complete)
-    fwrite(y.complete, "./test.csv")
+    fwrite(y.complete, "./table_output.csv")
 
